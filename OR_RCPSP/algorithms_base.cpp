@@ -110,9 +110,16 @@ namespace RCPSP
 		_activity_durations.clear();
 		_activity_resource_requirements.clear();
 
+
+		std::string text;
+
+
 		// 1. resources
+		file >> text; // "nb_resources"
 		file >> _nb_resources;
 		_resource_availabilities.reserve(_nb_resources);
+
+		file >> text; // "resource_availabilities"
 		for (int k = 0; k < _nb_resources; ++k)
 		{
 			int val;
@@ -121,12 +128,14 @@ namespace RCPSP
 		}
 
 		// 2. activities
+		file >> text; // "nb_activities"
 		file >> _nb_activities;
 		_activity_durations.reserve(_nb_activities);
 		_activity_resource_requirements.reserve(_nb_activities);
 		_precedence_relations.reserve(_nb_activities);
 
 		// 2.a durations
+		file >> text; // "activity_durations"
 		for (int i = 0; i < _nb_activities; ++i)
 		{
 			int val;
@@ -135,6 +144,7 @@ namespace RCPSP
 		}
 
 		// 2.b resource requirements
+		file >> text; // "resource_requirements"
 		for (int i = 0; i < _nb_activities; ++i)
 		{
 			std::vector<int> vec;
@@ -150,6 +160,7 @@ namespace RCPSP
 		}
 
 		// 2.c precedence relations
+		file >> text; // "precedence_relations"
 		for (int i = 0; i < _nb_activities; ++i)
 		{
 			std::vector<int> vec;
@@ -207,9 +218,9 @@ namespace RCPSP
 			[](unsigned char c) { return std::tolower(c); });
 
 
-		if (algorithm == "IP")
-			return std::make_unique<SCIP1>();
-		else if (algorithm == "DH")
+		if (algorithm == "ip")
+			return std::make_unique<SCIP>();
+		else if (algorithm == "dh")
 			return std::make_unique<DH>();
 		else
 			throw std::invalid_argument("No algorithm " + algorithm + " exists");

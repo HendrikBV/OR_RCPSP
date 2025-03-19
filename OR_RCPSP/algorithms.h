@@ -43,10 +43,12 @@ namespace RCPSP // resource-constrained project scheduling problem
 		int _nb_activities;
 
 		std::vector<int> _resource_availabilities;
-		std::vector<std::vector<int>> _precedence_relations;
+		std::vector<std::vector<int>> _precedence_relations; // If i before j then [i][j] == 1 and [j][i] == -1    
 		std::vector<int> _activity_durations;
 		std::vector<std::vector<int>> _activity_resource_requirements;
 
+		int precedence(int act_i, int act_j) { return _precedence_relations[act_i][act_j]; }
+		int resource_requirement(int activity, int resource) { return _activity_resource_requirements[activity][resource]; }
 
 	public:
 		virtual ~Algorithm() {}
@@ -59,7 +61,7 @@ namespace RCPSP // resource-constrained project scheduling problem
 	///////////////////////////////////////////////////////////////////////////
 
 	// with variables x[j][t] == 1 if job j starts at time t, 0 otherwise
-	class SCIP1 : public Algorithm
+	class SCIP : public Algorithm
 	{
 		std::unique_ptr<operations_research::MPSolver> _solver; // OR Tools solver
 
@@ -73,25 +75,6 @@ namespace RCPSP // resource-constrained project scheduling problem
 		 *  - GUROBI_MIXED_INTEGER_PROGRAMMING or GUROBI or GUROBI_MIP	    (license needed)
 		 *  - XPRESS_MIXED_INTEGER_PROGRAMMING or XPRESS or XPRESS_MIP		(license needed)
 		 */
-		std::string _solver_type = "SCIP";
-
-		void build_problem();
-		void solve_problem();
-
-		bool _output_screen = false;
-		double _max_computation_time = 600; // seconds
-
-	public:
-		void run(bool verbose) override;
-		void set_max_time(double time) { _max_computation_time = time; }
-	};
-
-	///////////////////////////////////////////////////////////////////////////
-
-	// with flow variables
-	class SCIP2 : public Algorithm
-	{
-		std::unique_ptr<operations_research::MPSolver> _solver; // OR Tools solver
 		std::string _solver_type = "SCIP";
 
 		void build_problem();
