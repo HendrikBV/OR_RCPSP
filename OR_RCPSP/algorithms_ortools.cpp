@@ -204,7 +204,25 @@ namespace RCPSP
 
 			std::cout << "\nElapsed time (s): " << elapsed_time_IP.count();
 
-			std::cout << "\nObjective value = " << objval;
+			std::cout << "\nMinimum project length = " << objval;
+
+			size_t max_periods = 0;
+			for (auto&& d : _activity_durations)
+				max_periods += d;
+
+			std::cout << "\nActivity finish times:";
+			for (auto j = 0; j < _nb_activities; ++j)
+			{
+				for (auto t = 0; t < max_periods; ++t)
+				{
+					operations_research::MPVariable* var = _solver->variable(j*max_periods + t);
+					double solvalue = var->solution_value();
+
+
+					if (solvalue > 0.99)
+						std::cout << "  f(" << j + 1 << ") = " << t + _activity_durations[j];
+				}
+			}
 		}
 	}
 

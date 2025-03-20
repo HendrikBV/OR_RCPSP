@@ -287,9 +287,12 @@ namespace RCPSP
 		}
 
 		// C. critical-sequence LB
-		_output << "\n\nThe critical sequence LB is calculated as follows.";
 		int LB_C = 0;
+
+		if(_verbose) // only use this LB if output is on to show how it can be calculated; otherwise it slows down the algorithms considerably
 		{
+			_output << "\n\nThe critical sequence LB is calculated as follows.";
+
 			// Temporarily include new precedence relations
 			for (auto&& delact : node.delayed_activities)
 			{
@@ -458,8 +461,8 @@ namespace RCPSP
 			if (cs.node != _current_cutset.node
 				&& cs.node != _current_cutset.parent_node // different path in the tree!
 				&& cs.unassigned_activities == _current_cutset.unassigned_activities
-				&& cs.decision_point <= _current_cutset.decision_point
-				&& cs.latest_finish_time_active_activities <= std::max(_current_cutset.decision_point, _current_cutset.latest_finish_time_active_activities))
+				&& cs.decision_point <= _current_cutset.decision_point 
+				&& cs.latest_finish_time_active_activities <= std::max(_current_cutset.decision_point, _current_cutset.latest_finish_time_active_activities)) 
 			{
 				_output << "\n\nThe current cutset is dominated by a cutset saved earlier!";
 				_output << "\nCutset saved earlier: ";
@@ -661,6 +664,7 @@ namespace RCPSP
 			_output << "(" << i + 1 << "," << _RCPL[i] << ")";
 			if (i < _nb_activities - 1) _output << ",";
 		} _output << "}\n\nWe also calculate the critical sequence bound for the root node:";
+		if(_verbose) // only use when showing output to show how calculation is done
 		{
 			_branching_tree.push_back(Information_Level_Tree());
 			_branching_tree.back().partial_schedule = _partial_schedule;
@@ -793,7 +797,7 @@ namespace RCPSP
 		}
 	}
 
-	bool DH::seperation()	// Returns true if theorems 3 or 4 applied, false otherwise
+	bool DH::separation()	// Returns true if theorems 3 or 4 applied, false otherwise
 	{
 		_output << "\n\n\n\n\nStep 3: Separation";
 
@@ -1055,6 +1059,7 @@ namespace RCPSP
 			for (auto&& act : _active_activities)
 				used += _activity_resource_requirements[act][k];
 
+			_resources_to_release[k] = 0; // reset
 			if (used - _resource_availabilities[k] > 0)
 			{
 				_resources_to_release[k] = used - _resource_availabilities[k];
@@ -1385,6 +1390,7 @@ namespace RCPSP
 
 	void DH::run(bool verbose)
 	{
+		_verbose = verbose;
 		_output.set_on(true);
 		_output << "\nStarting branch-and-bound procedure of Demeulemeester-Herroelen ...\n";
 		_output.set_on(verbose);
@@ -1399,6 +1405,9 @@ namespace RCPSP
 		// Initialize algorithm
 		initialization();
 
+		// test
+		_current_LB = 67;
+
 		bool need_backtrack = false;
 		while (true)
 		{
@@ -1407,7 +1416,7 @@ namespace RCPSP
 				if (incrementation())
 					break;		// backtrack
 
-				if (seperation())
+				if (separation())
 					continue;	// go to 'incrementation'
 
 				if (scheduling())	// if resource conflict

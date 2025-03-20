@@ -38,6 +38,7 @@ namespace RCPSP // resource-constrained project scheduling problem
 	{
 	protected:
 		Output _output;
+		bool _verbose;
 
 		int _nb_resources;
 		int _nb_activities;
@@ -186,7 +187,7 @@ namespace RCPSP // resource-constrained project scheduling problem
 		
 		void initialization();
 		bool incrementation();
-		bool seperation();
+		bool separation();
 		bool scheduling();
 		bool resolve_resource_conflict();
 		bool delay();
