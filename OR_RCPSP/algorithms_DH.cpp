@@ -320,7 +320,7 @@ namespace RCPSP
 				current_node = _remaining_nodes[index_node];
 				_remaining_nodes.erase(_remaining_nodes.begin() + index_node);
 			}
-			_output << "\n\nContinuing with best node on current level of tree";
+			_output << "\n\n\n\nContinuing with best node on current level of tree";
 			if (_verbose) print_node(current_node);
 
 
