@@ -17,13 +17,13 @@ namespace RCPSP
 
 		// add variables
 		size_t max_periods = 0;
-		for (auto&& d : _activity_durations)
-			max_periods += d;
+		for (auto&& d : _activities)
+			max_periods += d.duration;
 		const double infinity = _solver->infinity();
 
 
 		// variables x_jt
-		for (auto j = 0; j < _nb_activities; ++j)
+		for (auto j = 0; j < _activities.size(); ++j)
 		{
 			for (auto t = 0; t < max_periods; ++t)
 			{
@@ -43,7 +43,7 @@ namespace RCPSP
 		operations_research::MPObjective* objective = _solver->MutableObjective();
 		objective->SetMinimization();
 		{ // Z variable
-			operations_research::MPVariable* var = _solver->variable(_nb_activities*max_periods);
+			operations_research::MPVariable* var = _solver->variable(_activities.size() * max_periods);
 			objective->SetCoefficient(var, 1);
 		}
 
@@ -53,7 +53,7 @@ namespace RCPSP
 		int nb_constraints = -1;
 
 		// 1: every activity starts exactly once
-		for (auto j = 0; j < _nb_activities; ++j)
+		for (auto j = 0; j < _activities.size(); ++j)
 		{
 			++nb_constraints;
 
@@ -70,38 +70,35 @@ namespace RCPSP
 		}
 
 		// 2: precedence relations
-		for (auto i = 0; i < _nb_activities; ++i)
+		for (auto i = 0; i < _activities.size(); ++i)
 		{
-			for (auto j = 0; j < _nb_activities; ++j)
+			for (auto&& suc : _activities[i].successors)
 			{
-				if (precedence(i, j) == 1) // j after i
+				++nb_constraints;
+
+				std::string conname = "c2_" + std::to_string(i + 1) + "_" + std::to_string(suc + 1);
+				operations_research::MPConstraint* constraint = _solver->MakeRowConstraint(_activities[i].duration, infinity, conname);
+
+				// x_jt
+				for (auto t = 0; t < max_periods; ++t)
 				{
-					++nb_constraints;
+					size_t index_var = suc * max_periods + t;
+					operations_research::MPVariable* var = _solver->variable(index_var);
+					constraint->SetCoefficient(var, t);
+				}
 
-					std::string conname = "c2_" + std::to_string(i + 1) + "_" + std::to_string(j + 1);
-					operations_research::MPConstraint* constraint = _solver->MakeRowConstraint(_activity_durations[i], infinity, conname);
-
-					// x_jt
-					for (auto t = 0; t < max_periods; ++t)
-					{
-						size_t index_var = j * max_periods + t;
-						operations_research::MPVariable* var = _solver->variable(index_var);
-						constraint->SetCoefficient(var, t);
-					}
-
-					// x_it
-					for (auto t = 0; t < max_periods; ++t)
-					{
-						size_t index_var = i * max_periods + t;
-						operations_research::MPVariable* var = _solver->variable(index_var);
-						constraint->SetCoefficient(var, -t);
-					}
+				// x_it
+				for (auto t = 0; t < max_periods; ++t)
+				{
+					size_t index_var = i * max_periods + t;
+					operations_research::MPVariable* var = _solver->variable(index_var);
+					constraint->SetCoefficient(var, -t);
 				}
 			}
 		}
 
 		// 3: resource constraints
-		for (auto k = 0; k < _nb_resources; ++k)
+		for (auto k = 0; k < _resource_availabilities.size(); ++k)
 		{
 			for (auto t = 0; t < max_periods; ++t)
 			{
@@ -111,25 +108,25 @@ namespace RCPSP
 				operations_research::MPConstraint* constraint = _solver->MakeRowConstraint(-infinity, _resource_availabilities[k], conname);
 
 				// x_jtau
-				for (auto j = 0; j < _nb_activities; ++j)
+				for (auto j = 0; j < _activities.size(); ++j)
 				{
-					for (auto tau = std::max(t - _activity_durations[j] + 1, 0); tau <= t; ++tau)
+					for (auto tau = std::max(t - _activities[j].duration + 1, 0); tau <= t; ++tau)
 					{
 						size_t index_var = j * max_periods + tau;
 						operations_research::MPVariable* var = _solver->variable(index_var);
-						constraint->SetCoefficient(var, resource_requirement(j,k));
+						constraint->SetCoefficient(var, _activities[j].resource_requirements[k]);
 					}
 				}
 			}
 		}
 
 		// 4: makespan constraints
-		for (auto j = 0; j < _nb_activities; ++j)
+		for (auto j = 0; j < _activities.size(); ++j)
 		{
 			++nb_constraints;
 
 			std::string conname = "c4_" + std::to_string(j + 1);
-			operations_research::MPConstraint* constraint = _solver->MakeRowConstraint(_activity_durations[j], infinity, conname);
+			operations_research::MPConstraint* constraint = _solver->MakeRowConstraint(_activities[j].duration, infinity, conname);
 
 			// x_jt
 			for (auto t = 0; t < max_periods; ++t)
@@ -141,13 +138,13 @@ namespace RCPSP
 
 			// Z
 			{
-				size_t index_var = _nb_activities * max_periods;
+				size_t index_var = _activities.size() * max_periods;
 				operations_research::MPVariable* var = _solver->variable(index_var);
 				constraint->SetCoefficient(var, 1);
 			}
 		}
 
-		
+
 
 
 		// write to file
@@ -203,24 +200,28 @@ namespace RCPSP
 			double objval = _solver->Objective().Value();
 
 			std::cout << "\nElapsed time (s): " << elapsed_time_IP.count();
-
 			std::cout << "\nMinimum project length = " << objval;
+			_upper_bound = objval;
 
 			size_t max_periods = 0;
-			for (auto&& d : _activity_durations)
-				max_periods += d;
+			for (auto&& d : _activities)
+				max_periods += d.duration;
 
 			std::cout << "\nActivity finish times:";
-			for (auto j = 0; j < _nb_activities; ++j)
+			_best_activity_finish_times.clear();
+			_best_activity_finish_times.reserve(_activities.size());
+			for (auto j = 0; j < _activities.size(); ++j)
 			{
 				for (auto t = 0; t < max_periods; ++t)
 				{
-					operations_research::MPVariable* var = _solver->variable(j*max_periods + t);
+					operations_research::MPVariable* var = _solver->variable(j * max_periods + t);
 					double solvalue = var->solution_value();
 
-
 					if (solvalue > 0.99)
-						std::cout << "  f(" << j + 1 << ") = " << t + _activity_durations[j];
+					{
+						std::cout << "  f(" << j + 1 << ") = " << t + _activities[j].duration;
+						_best_activity_finish_times.push_back(t + _activities[j].duration);
+					}
 				}
 			}
 		}

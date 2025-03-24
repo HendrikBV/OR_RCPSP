@@ -97,6 +97,11 @@ namespace RCPSP
 	{
 		// DATA SHOULD INCLUDE DUMMY START AND END ACTIVITIES
 
+		// clear old data
+		_resource_availabilities.clear();
+		_activities.clear();
+
+
 		std::ifstream file;
 		file.open(filename);
 		if (!file.is_open())
@@ -104,100 +109,81 @@ namespace RCPSP
 			throw std::invalid_argument("Couldn't open the file with name " + filename);
 		}
 
-		// 0. clear data
-		_resource_availabilities.clear();
-		_precedence_relations.clear();
-		_activity_durations.clear();
-		_activity_resource_requirements.clear();
+		int nb_activities = 0, nb_resources = 0;
+		file >> nb_activities >> nb_resources;
 
-
-		std::string text;
-
-
-		// 1. resources
-		file >> text; // "nb_resources"
-		file >> _nb_resources;
-		_resource_availabilities.reserve(_nb_resources);
-
-		file >> text; // "resource_availabilities"
-		for (int k = 0; k < _nb_resources; ++k)
+		_resource_availabilities.reserve(nb_resources);
+		for (int k = 0; k < nb_resources; ++k)
 		{
 			int val;
 			file >> val;
 			_resource_availabilities.push_back(val);
 		}
 
-		// 2. activities
-		file >> text; // "nb_activities"
-		file >> _nb_activities;
-		_activity_durations.reserve(_nb_activities);
-		_activity_resource_requirements.reserve(_nb_activities);
-		_precedence_relations.reserve(_nb_activities);
-
-		// 2.a durations
-		file >> text; // "activity_durations"
-		for (int i = 0; i < _nb_activities; ++i)
+		_activities.reserve(nb_activities);
+		for (int i = 0; i < nb_activities; ++i)
 		{
-			int val;
-			file >> val;
-			_activity_durations.push_back(val);
-		}
+			_activities.push_back(Activity());
+			_activities.back().id = i;
 
-		// 2.b resource requirements
-		file >> text; // "resource_requirements"
-		for (int i = 0; i < _nb_activities; ++i)
-		{
-			std::vector<int> vec;
-			vec.reserve(_nb_resources);
-			_activity_resource_requirements.push_back(vec);
+			int dur;
+			file >> dur;
+			_activities.back().duration = dur;
 
-			for (int k = 0; k < _nb_resources; ++k)
+			_activities.back().resource_requirements.reserve(nb_resources);
+			for (int k = 0; k < nb_resources; ++k)
 			{
-				int val;
-				file >> val;
-				_activity_resource_requirements.back().push_back(val);
+				int res;
+				file >> res;
+				_activities.back().resource_requirements.push_back(res);
+			}
+
+			int nbsucc;
+			file >> nbsucc;
+			_activities.back().successors.reserve(nbsucc);
+			for (int s = 0; s < nbsucc; ++s)
+			{
+				int suc;
+				file >> suc;
+				--suc; // numbering starts at 1 instead of 0
+				_activities.back().successors.push_back(suc);
 			}
 		}
 
-		// 2.c precedence relations
-		file >> text; // "precedence_relations"
-		for (int i = 0; i < _nb_activities; ++i)
-		{
-			std::vector<int> vec;
-			vec.reserve(_nb_activities);
-			_precedence_relations.push_back(vec);
 
-			for (int j = 0; j < _nb_activities; ++j)
+		// calculate predecessors
+		for (int i = 0; i < _activities.size(); ++i)
+		{
+			int pred = i;
+			for (auto&& suc : _activities[i].successors)
 			{
-				int val;
-				file >> val;
-				_precedence_relations.back().push_back(val);
+				_activities[suc].predecessors.push_back(pred);
 			}
 		}
-
 
 
 
 		// Sanity check
 		// A) dummy start and end
-		if (_activity_durations.front() != 0 || _activity_durations.back() != 0)
+		if (_activities.front().duration != 0 || _activities.back().duration != 0)
 		{
 			throw std::logic_error("Duration dummy start or dummy end activity is not 0");
 		}
-		for (int k = 0; k < _nb_resources; ++k)
+		for (int k = 0; k < nb_resources; ++k)
 		{
-			if (_activity_resource_requirements.front()[k] != 0 || _activity_resource_requirements.back()[k] != 0)
+			if (_activities.front().resource_requirements[k] != 0 ||
+				_activities.back().resource_requirements[k] != 0)
 			{
 				throw std::logic_error("Resource requirements for dummy start or dummy end activity are not 0");
 			}
 		}
 
 		// B) check that resources do not exceed availability for individual resources
-		for (int i = 0; i < _nb_activities; ++i)
+		for (int i = 0; i < nb_activities; ++i)
 		{
-			for (int k = 0; k < _nb_resources; ++k)
+			for (int k = 0; k < nb_resources; ++k)
 			{
-				int req = _activity_resource_requirements[i][k];
+				int req = _activities[i].resource_requirements[k];
 				int av = _resource_availabilities[k];
 				if (req > av)
 				{
@@ -218,10 +204,10 @@ namespace RCPSP
 			[](unsigned char c) { return std::tolower(c); });
 
 
-		if (algorithm == "ip")
-			return std::make_unique<SCIP>();
-		else if (algorithm == "dh")
+		if (algorithm == "dh")
 			return std::make_unique<DH>();
+		else if (algorithm == "ip")
+			return std::make_unique<SCIP>();
 		else
 			throw std::invalid_argument("No algorithm " + algorithm + " exists");
 	}
