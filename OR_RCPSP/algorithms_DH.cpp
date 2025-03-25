@@ -1,8 +1,8 @@
 #include "algorithms.h"
 #include <chrono>
 #include <stdexcept>
-#include <iostream>
 #include <list>
+#include <algorithm>
 
 
 
@@ -792,13 +792,13 @@ namespace RCPSP
 									}
 
 									// additional precedence relations
-									// do we use this?????????
-									for (auto&& actdel : subset)
+									// not used in current implementation
+									/*for (auto&& actdel : subset)
 									{
 										_remaining_nodes.back().additional_precedences.push_back(std::pair<int, int>());
 										_remaining_nodes.back().additional_precedences.back().first = efand;
 										_remaining_nodes.back().additional_precedences.back().second = actdel;
-									}
+									}*/
 
 									// calculate lower bound (only critical path lower bound is used)
 									for (auto&& actdel : subset)

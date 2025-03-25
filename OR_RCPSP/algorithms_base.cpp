@@ -195,6 +195,54 @@ namespace RCPSP
 	}
 
 
+	void Algorithm::check_solution()
+	{
+		bool ok = true;
+		std::cout << "\n";
+
+		// resource use
+		for (int t = 0; t < _upper_bound; ++t)
+		{
+			for (int k = 0; k < _resource_availabilities.size(); ++k)
+			{
+				int resource_use = 0;
+				for (int i = 0; i < _activities.size(); ++i)
+				{
+					if (_best_activity_finish_times[i] - _activities[i].duration >= t
+						&& _best_activity_finish_times[i] < t)
+					{
+						resource_use += _activities[i].resource_requirements[k];
+					}
+				}
+
+				if (resource_use > _resource_availabilities[k])
+				{
+					ok = false;
+					std::cout << "\nResource use in period " << t << " exceeds resource availabilities";
+				}
+			}
+		}
+
+		// precedences
+		for (int i = 0; i < _activities.size(); ++i)
+		{
+			for (auto&& suc : _activities[i].successors)
+			{
+				if (_best_activity_finish_times[suc] - _activities[suc].duration < _best_activity_finish_times[i])
+				{
+					ok = false;
+					std::cout << "Activity " << i+1 << " finishes at time " << _best_activity_finish_times[i]
+						<< " but its successor " << suc + 1 << " already starts at time "
+							<< _best_activity_finish_times[suc] - _activities[suc].duration;
+				}
+			}
+		}
+
+		if (ok)
+			std::cout << "\nCheck solution: OK";
+	}
+
+
 	///////////////////////////////////////////////////////////////////////////
 
 
@@ -207,7 +255,7 @@ namespace RCPSP
 		if (algorithm == "dh")
 			return std::make_unique<DH>();
 		else if (algorithm == "ip")
-			return std::make_unique<SCIP>();
+			return std::make_unique<IP>();
 		else
 			throw std::invalid_argument("No algorithm " + algorithm + " exists");
 	}

@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 {
 	try
 	{
-		cxxopts::Options options("OR -- RCSPS",
+		cxxopts::Options options("OR -- RCPSP",
 			"This program implements some algorithms for the resource-constrained project scheduling problem.");
 
 		options.add_options()
@@ -50,6 +50,7 @@ int main(int argc, char* argv[])
 		std::unique_ptr<RCPSP::Algorithm> problem = RCPSP::AlgorithmFactory::create(algorithm);
 		problem->read_data(datafile);
 		problem->run(verbose);
+		problem->check_solution();
 
 
 

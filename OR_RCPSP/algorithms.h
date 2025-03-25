@@ -5,10 +5,7 @@
 
 #include <exception>
 #include <vector>
-#include <map>
-#include <set>
 #include <string>
-#include <algorithm>
 #include <memory>
 #include "ortools/linear_solver/linear_solver.h"
 
@@ -61,18 +58,19 @@ namespace RCPSP // resource-constrained project scheduling problem
 		std::vector<int> _best_activity_finish_times;
 
 
+
 	public:
 		virtual ~Algorithm() {}
 
 		void read_data(const std::string& filename);
-
+		void check_solution();
 		virtual void run(bool verbose) = 0;
 	};
 
 	///////////////////////////////////////////////////////////////////////////
 
 	// with variables x[j][t] == 1 if job j starts at time t, 0 otherwise
-	class SCIP : public Algorithm
+	class IP : public Algorithm
 	{
 		std::unique_ptr<operations_research::MPSolver> _solver; // OR Tools solver
 		std::string _solver_type = "SCIP";
@@ -81,7 +79,7 @@ namespace RCPSP // resource-constrained project scheduling problem
 		void solve_problem();
 
 		bool _output_screen = false;
-		double _max_computation_time = 600; // seconds
+		double _max_computation_time = 1800; // seconds
 
 	public:
 		void run(bool verbose) override;
@@ -114,7 +112,7 @@ namespace RCPSP // resource-constrained project scheduling problem
 			std::vector<bool> act_active; // [i] == true if activity i is active
 			std::vector<int> act_finish_time; // [i] == finish time of activity i
 			std::vector<bool> act_eligible;	// [i] == true if activity i is eligible
-			std::vector<std::pair<int, int>> additional_precedences; // (i,j) if i before j
+			//std::vector<std::pair<int, int>> additional_precedences; // (i,j) if i before j
 
 			Cutset cutset;
 		};

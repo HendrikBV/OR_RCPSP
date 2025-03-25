@@ -1,15 +1,14 @@
 #include "algorithms.h"
 #include <stdexcept>
-#include <memory>
 #include <iostream>
 #include <fstream>
 #include <chrono>
-#include <queue>
+
 
 
 namespace RCPSP
 {
-	void SCIP::build_problem()
+	void IP::build_problem()
 	{
 		// create the solver (_solver_type == SCIP or CPLEX or ...)
 		_solver.reset(operations_research::MPSolver::CreateSolver(_solver_type));
@@ -172,7 +171,7 @@ namespace RCPSP
 		}
 	}
 
-	void SCIP::solve_problem()
+	void IP::solve_problem()
 	{
 		std::cout << "\nUsing an IP model with x_jk = 1 if activity j starts at time t, 0 otherwise"
 			<< "\nUsing ORTools with SCIP to solve the model ...\n\n";
@@ -227,7 +226,7 @@ namespace RCPSP
 		}
 	}
 
-	void SCIP::run(bool verbose)
+	void IP::run(bool verbose)
 	{
 		_output_screen = verbose;
 
